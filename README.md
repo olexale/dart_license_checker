@@ -32,3 +32,10 @@ By default, `dart_license_checker` only shows immediate dependencies (the packag
 If you want to analyze transitive dependencies too, you can use the `--show-transitive-dependencies` flag:
 
 `dart_license_checker --show-transitive-dependencies`
+
+## Showing in plain text
+
+By default, `dart_license_checker` shows the output in a table. If you want to see a plain output (useful for parsing), you can use the `--plain` flag:
+```sh
+dart_license_checker --plain
+```

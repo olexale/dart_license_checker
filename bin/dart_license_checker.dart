@@ -41,6 +41,7 @@ const possibleLicenseFileNames = [
 void main(List<String> arguments) async {
   final showTransitiveDependencies =
       arguments.contains('--show-transitive-dependencies');
+  final plain = arguments.contains('--plain');
   final pubspecFile = File('pubspec.yaml');
 
   if (!pubspecFile.existsSync()) {
@@ -63,7 +64,7 @@ void main(List<String> arguments) async {
 
   final packageConfig = json.decode(packageConfigFile.readAsStringSync());
 
-  final rows = <Row>[];
+  final licenses = <String, List<License>>{};
 
   for (final package in packageConfig['packages']) {
     final name = package['name'];
@@ -94,18 +95,30 @@ void main(List<String> arguments) async {
       }
     }
 
-    if (license != null && license.isNotEmpty) {
-      rows.add(Row(cells: [
-        Cell(name, style: CellStyle(alignment: TextAlignment.TopRight)),
-        ...license.map((lic) => Cell(formatLicenseSpdx(lic)))
-      ]));
-    } else {
-      rows.add(Row(cells: [
-        Cell(name, style: CellStyle(alignment: TextAlignment.TopRight)),
-        Cell('No license file'.grey()),
-      ]));
-    }
+    licenses[name] = license ?? [];
   }
+  if (plain) {
+    printPlain(licenses);
+  } else {
+    printTable(licenses);
+  }
+
+  exit(0);
+}
+
+void printTable(Map<String, List<License>> licenses) {
+  final rows = licenses
+      .map((key, value) => MapEntry(
+          key,
+          Row(cells: [
+            Cell(key, style: CellStyle(alignment: TextAlignment.TopRight)),
+            if (licenses.isEmpty)
+              Cell('No license file'.grey())
+            else
+              ...value.map((lic) => Cell(formatLicenseSpdx(lic)))
+          ])))
+      .values
+      .toList();
   print(
     Table(
       tableStyle: TableStyle(border: true),
@@ -129,8 +142,15 @@ void main(List<String> arguments) async {
       ),
     ).render(),
   );
+}
 
-  exit(0);
+void printPlain(Map<String, List<License>> rows) {
+  for (final row in rows.entries) {
+    final licenses = row.value.isNotEmpty
+        ? row.value.map((e) => e.spdxIdentifier).join(', ')
+        : 'No license file';
+    print('${row.key}:$licenses');
+  }
 }
 
 String formatLicenseName(LicenseFile license) {
